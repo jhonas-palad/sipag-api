@@ -6,4 +6,3 @@ class WastePost:
     description = models.TextField(
         verbose_name=_("Description"), blank=False, default=""
     )
-    

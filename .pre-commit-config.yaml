@@ -1,0 +1,25 @@
+repos:
+  # - repo: https://github.com/pre-commit/pre-commit-hooks
+  #   rev: v1.2.3
+  #   hooks:
+  #     - id: detect-aws-credentials
+  #     - id: requirements-txt-fixer
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+  - repo: local
+    hooks:
+      - id: requirements-exists
+        name: requirements-exists
+        entry: ./scripts/check_requirements_txt
+        verbose: true
+        language: script
+        fail_fast: true
+  - repo: https://github.com/python-poetry/poetry
+    rev: 1.8.3
+    hooks:
+      - id: poetry-export
+        args: ["-f", "requirements.txt", "-o", "requirements.txt"]
+        verbose: true
+   
