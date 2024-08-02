@@ -13,6 +13,7 @@ from .serializers import (
     SignupSerializer,
     UserDetailsSerailizer,
     UserPhotoSerializer,
+    UserCredentialsSerializer,
 )
 from utils.models import to_model_dict
 
@@ -97,6 +98,26 @@ class SignupView(GenericAPIView):
 
 signup_view = SignupView.as_view()
 
+
+class UserCredentailsView(GenericAPIView):
+    permission_classes = (AllowAny,)
+    serializer_class = UserCredentialsSerializer
+
+    @sensitive_post_parameters_m
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_response(self):
+        return Response(data=self.serializer.data, status=status.HTTP_202_ACCEPTED)
+
+    def post(self, request, *args, **kwargs):
+        self.serializer = self.get_serializer(
+            data=request.data, context={"request": self.request}
+        )
+        self.serializer.is_valid(raise_exception=True)
+        return self.get_response()
+    
+user_credentails_view = UserCredentailsView.as_view()
 
 class CheckUserFieldsView(GenericAPIView):
     permission_classes = (AllowAny,)

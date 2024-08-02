@@ -71,6 +71,23 @@ class UserDetailsSerailizer(serializers.Serializer):
     photo = ImageSerializer()
 
 
+class UserCredentialsSerializer(serializers.Serializer):
+    phone_number = PhoneNumberField(region='PH',required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    password = PasswordField(validators=[validate_password])
+
+    def validate_phone_number(self, phone_number):
+
+        if UserModel._default_manager.filter(phone_number=phone_number).exists():
+            raise serializers.ValidationError("Phone number has already been used.")
+        return phone_number
+
+    def validate_email(self, email):
+        if UserModel._default_manager.filter(email=email).exists():
+            raise serializers.ValidationError("Email has already been used.”")
+        return email
+
+
 class JWTSerializer(serializers.Serializer):
     token_class = AccessToken
 
@@ -129,7 +146,7 @@ class SignupSerializer(serializers.Serializer):
         if phone_number == "":
             return None
         if self.Meta.model._default_manager.filter(phone_number=phone_number).exists():
-            raise serializers.ValidationError("Phone number has already been used.”")
+            raise serializers.ValidationError("Phone number has already been used.")
         return phone_number
 
     def validate_email(self, email):
