@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth.base_user import AbstractBaseUser
+from phonenumbers import PhoneNumber
 from django.http import HttpRequest
 from django.db.models.query import Q
 
@@ -12,13 +13,12 @@ class ModelBackend(BaseBackend):
     def authenticate(
         self, request, phone_number=None, email=None, password=None, **kwargs
     ):
+
         if (phone_number is None and email is None) or password is None:
             return
-
+        phone_number = PhoneNumber("63", phone_number)
         try:
-            user = UserModel._default_manager.get(
-                Q(phone_number=phone_number) | Q(email=email)
-            )
+            user = UserModel.objects.get(Q(phone_number=phone_number) | Q(email=email))
         except UserModel.DoesNotExist:
             # Run the default password hasher once to reduce the timing
             # difference between an existing and a nonexistent user (#20760).

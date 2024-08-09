@@ -72,7 +72,7 @@ class UserDetailsSerailizer(serializers.Serializer):
 
 
 class UserCredentialsSerializer(serializers.Serializer):
-    phone_number = PhoneNumberField(region='PH',required=False, allow_blank=True)
+    phone_number = PhoneNumberField(region="PH", required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True)
     password = PasswordField(validators=[validate_password])
 

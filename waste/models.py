@@ -1,6 +1,7 @@
 from django.db import models
 from api.models import Image
-from geography.models import GeoMarker
+from django.contrib.gis.db import models
+from django.contrib.gis.geos import Point
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
@@ -13,18 +14,22 @@ class WasteReport(models.Model):
         PENDING = "PENDING", _("Pending Removal")
         URGENT = "URGENT", _("Urgent Cleanup")
 
+    title = models.CharField(
+        _("title"),
+        max_length=255,
+    )
     status = models.CharField(
-        max_length=20, choices=StatusChoice, default=StatusChoice.PENDING
+        _("status"), max_length=20, choices=StatusChoice, default=StatusChoice.PENDING
     )
     description = models.TextField(
-        _("Description"),
+        _("description"),
     )
 
     posted_by = models.ForeignKey(to=User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(_("Created at"), auto_now_add=True)
     last_modified = models.DateTimeField(_("Last modified"), auto_now=True)
 
-    location = models.ForeignKey(to=GeoMarker, on_delete=models.DO_NOTHING)
+    location = models.PointField(_("location"), geography=True, default=Point(0.0, 0.0))
     thumbnail = models.ForeignKey(to=Image, on_delete=models.DO_NOTHING)
 
 

@@ -40,12 +40,12 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "rest_framework",
+    "rest_framework_gis",
     "rest_framework_simplejwt",
     "phonenumber_field",
     "corsheaders",
     "auth_api",
     "waste",
-    "geography",
     "api",
 ]
 
@@ -139,9 +139,9 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-MEDIA_URL= 'media/'
+MEDIA_URL = "media/"
 
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

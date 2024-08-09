@@ -16,6 +16,7 @@ django-phonenumber-field = {extras = ["phonenumberslite"], version = "^8.0.0"}
 djangorestframework-simplejwt = "^5.3.1"
 pillow = "^10.4.0"
 blurhash-python = "^1.2.2"
+djangorestframework-gis = "^1.0"
 
 
 [build-system]

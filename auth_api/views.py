@@ -1,9 +1,11 @@
 from rest_framework.generics import GenericAPIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
+
 from rest_framework.exceptions import ValidationError
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
 from django.http.request import QueryDict
@@ -30,6 +32,10 @@ sensitive_post_parameters_m = method_decorator(
 class LoginView(GenericAPIView):
     permission_classes = (AllowAny,)
     serializer_class = LoginSerializer
+
+    def initial(self, request, *args, **kwargs):
+        print(request.headers)
+        return super().initial(request, *args, **kwargs)
 
     @sensitive_post_parameters_m
     def dispatch(self, request, *args, **kwargs):
@@ -116,8 +122,10 @@ class UserCredentailsView(GenericAPIView):
         )
         self.serializer.is_valid(raise_exception=True)
         return self.get_response()
-    
+
+
 user_credentails_view = UserCredentailsView.as_view()
+
 
 class CheckUserFieldsView(GenericAPIView):
     permission_classes = (AllowAny,)
@@ -159,3 +167,15 @@ class UserPhotoView(GenericAPIView):
 
 
 upload_image_view = UserPhotoView.as_view()
+
+
+class SignoutView(GenericAPIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+
+        return Response(data={"isokay": "ASAS"}, status=status.HTTP_200_OK)
+
+
+signout_view = SignoutView.as_view()
