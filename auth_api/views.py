@@ -1,7 +1,7 @@
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
 
 from rest_framework.exceptions import ValidationError
@@ -32,10 +32,8 @@ sensitive_post_parameters_m = method_decorator(
 class LoginView(GenericAPIView):
     permission_classes = (AllowAny,)
     serializer_class = LoginSerializer
-
-    def initial(self, request, *args, **kwargs):
-        print(request.headers)
-        return super().initial(request, *args, **kwargs)
+    parser_classes = (JSONParser,)
+    authentication_classes = tuple()
 
     @sensitive_post_parameters_m
     def dispatch(self, request, *args, **kwargs):

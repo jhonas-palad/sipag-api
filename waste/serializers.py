@@ -28,6 +28,11 @@ class WasteReportSerializer(serializers.ModelSerializer):
         user_details = UserDetailsSerailizer(
             instance=instance.posted_by, context=self.context
         ).data
+        cleaner_details = None
+        if hasattr(instance, "cleaner") and instance.cleaner:
+            cleaner_details = UserDetailsSerailizer(
+                instance=instance.cleaner, context=self.context
+            ).data
         instance = super().to_representation(instance)
         instance["location"] = {
             "lng": instance["location"]["coordinates"][0],
@@ -37,6 +42,7 @@ class WasteReportSerializer(serializers.ModelSerializer):
             instance=thumbnail_obj, context=self.context
         ).data
         instance["posted_by"] = user_details
+        instance["cleaner"] = cleaner_details
         return instance
 
 
@@ -69,3 +75,14 @@ class NewWasteReportSerializer(serializers.Serializer):
         img.upload_to = "waste_reports"
         img.save()
         return img
+
+
+class ActionWasteReportSerializer(serializers.Serializer):
+    cleaner = serializers.PrimaryKeyRelatedField(
+        queryset=get_user_model().objects.all()
+    )
+    post_id = serializers.PrimaryKeyRelatedField(queryset=WasteReport.objects.all())
+    action = serializers.ChoiceField(choices=("accept", "done", "cancel"))
+
+
+# class WasteActivitySerializer(serializers.ModelSerializer): ...
