@@ -3,8 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import NotFound
-
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import WasteReport, WasteReportActivity
 from .serializers import (
@@ -28,7 +27,7 @@ class WasteReportView(GenericAPIView):
     def get_response(self, data, **kwargs):
         return Response(data=data, status=status.HTTP_201_CREATED, **kwargs)
 
-    def get_waste_report(self, id=None):
+    def get_waste_report(self, id=None, **kwargs):
         try:
             return WasteReport.objects.get(pk=id)
         except WasteReport.DoesNotExist:
@@ -62,6 +61,22 @@ class WasteReportView(GenericAPIView):
 
         data = self.create_waste_report(request.data)
         return self.get_response(data)
+
+    def delete_wate_report(self, id):
+        # waste_report = self.get_waste_reports(id=id, posted_by=self.user)
+        waste_report = self.get_waste_report(id)
+        print(waste_report)
+        if waste_report.posted_by != self.user:
+            raise PermissionDenied(
+                "You don't have permission to delete this waste report."
+            )
+        waste_report.delete()
+        return waste_report
+
+    def delete(self, request, *args, **kwargs):
+        self.user = request.user
+        r = self.delete_wate_report(kwargs.pop("pk"))
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def patch(self, request, *args, **kwargs): ...
 
