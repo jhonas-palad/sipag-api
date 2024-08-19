@@ -118,6 +118,8 @@ class SignupSerializer(serializers.Serializer):
     phone_number = PhoneNumberField(region="PH", allow_blank=True, required=False)
     email = serializers.EmailField(allow_blank=True, required=False)
     password = PasswordField()
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
     photo = serializers.ImageField()
 
     class Meta:
@@ -129,6 +131,8 @@ class SignupSerializer(serializers.Serializer):
         user_photo.upload_to = "users"
         user_photo.save()
         new_user_kwargs = {
+            "first_name": validated_data.get("first_name", ""),
+            "last_name": validated_data.get("last_name", ""),
             "password": validated_data["password"],
             "email": validated_data.get("email", ""),
             "phone_number": validated_data.get("phone_number", None),
