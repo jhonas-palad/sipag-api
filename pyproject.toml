@@ -17,6 +17,9 @@ djangorestframework-simplejwt = "^5.3.1"
 pillow = "^10.4.0"
 blurhash-python = "^1.2.2"
 djangorestframework-gis = "^1.0"
+channels = {extras = ["daphne"], version = "^4.1.0"}
+python-dotenv = "^1.0.1"
+django-storages = {extras = ["s3"], version = "^1.14.4"}
 
 
 [build-system]

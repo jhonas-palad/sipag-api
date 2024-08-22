@@ -13,25 +13,32 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from datetime import timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
+import os
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-j9t*(si63)hg-y^jzx%^15$0r$4b^nrdnhn1(r9v-aze@cu=f1"
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-j9t*(si63)hg-y^jzx%^15$0r$4b^nrdnhn1(r9v-aze@cu=f1"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = []
+DEBUG = os.environ.get("DEBUG")
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -78,7 +85,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "sipag.wsgi.application"
+# WSGI_APPLICATION = "sipag.wsgi.application"
+ASGI_APPLICATION = "sipag.asgi.application"
 
 
 # Database
@@ -87,11 +95,11 @@ WSGI_APPLICATION = "sipag.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": "sipag",
-        "USER": "jhonas",
-        "PASSWORD": "passwordev",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "NAME": os.environ.get("DATABASE_NAME", "sipag"),
+        "USER": os.environ.get("DATABASE_USER", "jhonas"),
+        "PASSWORD": os.environ.get("DATABASE_PASSWORD", "passwordev"),
+        "HOST": os.environ.get("DATABASE_HOST", "localhost"),
+        "PORT": os.environ.get("DATABASE_PORT", "5432"),
     },
 }
 
@@ -134,14 +142,52 @@ USE_I18N = True
 USE_TZ = True
 
 
+USE_S3 = os.getenv("USE_S3", False) == "TRUE"
+# AWS settings
+
+if USE_S3:
+    # aws settings
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
+    AWS_DEFAULT_ACL = None
+    AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+    AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+    # s3 static settings
+    STATIC_LOCATION = "static"
+    STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{STATIC_LOCATION}/"
+    STATICFILES_STORAGE = "sipag.storage_backends.StaticStorage"
+    # s3 public media settings
+    PUBLIC_MEDIA_LOCATION = "media"
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{PUBLIC_MEDIA_LOCATION}/"
+    DEFAULT_FILE_STORAGE = "sipag.storage_backends.PublicMediaStorage"
+else:
+    STATIC_URL = "/staticfiles/"
+    STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+    MEDIA_URL = "/mediafiles/"
+    MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
+
+STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),)
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = "static/"
+if DEBUG:
+    STATIC_URL = "static/"
 
-MEDIA_URL = "media/"
+    MEDIA_URL = "media/"
 
-MEDIA_ROOT = BASE_DIR / "media"
+    MEDIA_ROOT = BASE_DIR / "media"
+else:
+
+    STATIC_URL = (
+        f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{STATICFILES_LOCATION}/"
+    )
+    MEDIA_URL = (
+        f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{MEDIAFILES_LOCATION}/"
+    )
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
