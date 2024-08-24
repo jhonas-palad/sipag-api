@@ -7,5 +7,5 @@ urlpatterns = [
     re_path(r"^$", index_view, name="index-view"),
     re_path(r"^auth/", include("auth_api.urls", namespace="auth-api")),
     re_path(r"^users/", include("auth_api.users_urls", namespace="auth-api-users")),
-    re_path(r"^waste-report/", include("waste.urls", namespace="waste-report")),
+    re_path(r"^waste-reports/", include("waste.urls", namespace="waste-report")),
 ]

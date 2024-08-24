@@ -3,9 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, MethodNotAllowed
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import WasteReport, WasteReportActivity
+from channels.db import database_sync_to_async
 from .serializers import (
     NewWasteReportSerializer,
     WasteReportSerializer,
@@ -56,11 +57,22 @@ class WasteReportView(GenericAPIView):
         return result
 
     def post(self, request, *args, **kwargs):
-        user = request.user
-        request.data["user_id"] = user.id
+        """
+        Create a new post
 
-        data = self.create_waste_report(request.data)
-        return self.get_response(data)
+        Don't allow when there is a pk in kwargs
+        """
+
+        if "pk" in kwargs:
+            raise MethodNotAllowed(method="post")
+
+        user = request.user
+        data = request.data.dict()
+        print(data)
+        data["user_id"] = user.id
+
+        waste_report = self.create_waste_report(data)
+        return self.get_response(waste_report)
 
     def delete_wate_report(self, id):
         # waste_report = self.get_waste_reports(id=id, posted_by=self.user)
@@ -99,10 +111,17 @@ class WasteReportTaskView(GenericAPIView):
 
     def modify_post_task(self, data):
         data["cleaner"] = data["user"].id
-        task_serializer = ActionWasteReportSerializer(data=data)
+        post_id = self.kwargs.get("post_id")
+        instance = get_object_or_404(WasteReport.objects.all(), pk=post_id)
+
+        data["post_id"] = post_id
+
+        task_serializer = ActionWasteReportSerializer(
+            data=data, context={"waste_post": instance}
+        )
         task_serializer.is_valid(raise_exception=True)
         data = task_serializer.data
-        instance = get_object_or_404(WasteReport.objects.all(), pk=data["post_id"])
+
         if data["action"] == "accept":
             data = {
                 "cleaner": data["cleaner"],
@@ -129,7 +148,7 @@ class WasteReportTaskView(GenericAPIView):
         user = request.user
         request.data["user"] = user
         self.modify_post_task(request.data)
-        return Response(data={}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 waste_report_task_view = WasteReportTaskView.as_view()

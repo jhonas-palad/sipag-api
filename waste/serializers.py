@@ -22,6 +22,13 @@ class WasteReportSerializer(serializers.ModelSerializer):
         model = WasteReport
         fields = "__all__"
 
+    def validate(self, attrs):
+        if self.instance:
+            for k, v in attrs.items():
+                setattr(self.instance, k, v)
+            self.instance.full_clean()
+        return attrs
+
     def to_representation(self, instance):
         thumbnail_obj = instance.thumbnail
         # user = UserModel.objects.get(pk=instance.posted_by)
@@ -78,11 +85,32 @@ class NewWasteReportSerializer(serializers.Serializer):
 
 
 class ActionWasteReportSerializer(serializers.Serializer):
+    CHOICES = ("accept", "done", "cancel")
     cleaner = serializers.PrimaryKeyRelatedField(
         queryset=get_user_model().objects.all()
     )
     post_id = serializers.PrimaryKeyRelatedField(queryset=WasteReport.objects.all())
-    action = serializers.ChoiceField(choices=("accept", "done", "cancel"))
+    action = serializers.ChoiceField(choices=CHOICES)
+
+    def validate(self, attrs):
+        waste_post = self.context.get("waste_post")
+
+        if waste_post.posted_by == attrs["cleaner"]:
+            raise serializers.ValidationError(
+                {"cleaner": "You cannot accept waste report task to your own post"}
+            )
+
+        return attrs
+
+    def validate_action(self, action):
+        instance = self.context.get("waste_post")
+        instance_status = instance.status
+
+        if action == "accept" and instance_status != WasteReport.StatusChoice.AVAILABLE:
+            raise serializers.ValidationError(
+                "Waste report status is not available, can't accept the task"
+            )
+        return action
 
 
 # class WasteActivitySerializer(serializers.ModelSerializer): ...

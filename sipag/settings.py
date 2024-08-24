@@ -32,7 +32,7 @@ SECRET_KEY = os.environ.get(
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-DEBUG = os.environ.get("DEBUG")
+DEBUG = os.getenv("DEBUG") == "TRUE"
 
 
 # Application definition
@@ -91,17 +91,31 @@ ASGI_APPLICATION = "sipag.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-DATABASES = {
-    "default": {
+_DATABASES = {
+    "postgres-dev": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": os.environ.get("DATABASE_NAME", "sipag"),
-        "USER": os.environ.get("DATABASE_USER", "jhonas"),
-        "PASSWORD": os.environ.get("DATABASE_PASSWORD", "passwordev"),
-        "HOST": os.environ.get("DATABASE_HOST", "localhost"),
-        "PORT": os.environ.get("DATABASE_PORT", "5432"),
+        "NAME": "sipag",
+        "USER": "jhonas",
+        "PASSWORD": "passwordev",
+        "HOST": "localhost",
+        "PORT": "5432",
+    },
+    "postgres-prod": {
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "NAME": os.getenv("DATABASE_NAME", "sipag"),
+        "USER": os.getenv("DATABASE_USER", "jhonas"),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD", "passwordev"),
+        "HOST": os.getenv("DATABASE_HOST", "localhost"),
+        "PORT": os.getenv("DATABASE_PORT", "5432"),
     },
 }
+
+DATABASES = {}
+
+if DEBUG:
+    DATABASES["default"] = _DATABASES["postgres-dev"]
+else:
+    DATABASES["default"] = _DATABASES["postgres-prod"]
 
 # AUTH
 
@@ -162,32 +176,12 @@ if USE_S3:
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{PUBLIC_MEDIA_LOCATION}/"
     DEFAULT_FILE_STORAGE = "sipag.storage_backends.PublicMediaStorage"
 else:
-    STATIC_URL = "/staticfiles/"
-    STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-    MEDIA_URL = "/mediafiles/"
-    MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
-
-STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),)
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
-if DEBUG:
     STATIC_URL = "static/"
-
+    STATIC_ROOT = BASE_DIR / "static"
     MEDIA_URL = "media/"
-
     MEDIA_ROOT = BASE_DIR / "media"
-else:
 
-    STATIC_URL = (
-        f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{STATICFILES_LOCATION}/"
-    )
-    MEDIA_URL = (
-        f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{MEDIAFILES_LOCATION}/"
-    )
-
+# STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
