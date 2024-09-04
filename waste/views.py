@@ -1,4 +1,4 @@
-from rest_framework.generics import GenericAPIView, get_object_or_404
+from rest_framework.generics import GenericAPIView, ListAPIView, get_object_or_404
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -9,6 +9,7 @@ from .models import WasteReport, WasteReportActivity
 from channels.db import database_sync_to_async
 from .serializers import (
     NewWasteReportSerializer,
+    WasteActivitySerializer,
     WasteReportSerializer,
     ActionWasteReportSerializer,
 )
@@ -68,17 +69,14 @@ class WasteReportView(GenericAPIView):
 
         user = request.user
         data = request.data.dict()
-        print(data)
         data["user_id"] = user.id
 
         waste_report = self.create_waste_report(data)
         return self.get_response(waste_report)
 
-    def delete_wate_report(self, id):
-        # waste_report = self.get_waste_reports(id=id, posted_by=self.user)
+    def delete_waste_report(self, id):
         waste_report = self.get_waste_report(id)
-        print(waste_report)
-        if waste_report.posted_by != self.user:
+        if not self.user.is_staff and waste_report.posted_by != self.user:
             raise PermissionDenied(
                 "You don't have permission to delete this waste report."
             )
@@ -87,21 +85,13 @@ class WasteReportView(GenericAPIView):
 
     def delete(self, request, *args, **kwargs):
         self.user = request.user
-        r = self.delete_wate_report(kwargs.pop("pk"))
+        r = self.delete_waste_report(kwargs.pop("pk"))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def patch(self, request, *args, **kwargs): ...
 
 
 waste_report_view = WasteReportView.as_view()
-# class WasteReportTasks(GenericAPIView):
-#     queryset = WasteReport.objects.all()
-#     serializer_class = NewWasteReportSerializer
-#     permission_classes = (IsAuthenticated,)
-#     authentication_classes = (JWTAuthentication,)
-#     def accept_task(self, *args, **kwargs):
-#         serializer = self.get_
-#     def post(self, request, *args, **kwargs):
 
 
 class WasteReportTaskView(GenericAPIView):
@@ -111,44 +101,33 @@ class WasteReportTaskView(GenericAPIView):
 
     def modify_post_task(self, data):
         data["cleaner"] = data["user"].id
-        post_id = self.kwargs.get("post_id")
-        instance = get_object_or_404(WasteReport.objects.all(), pk=post_id)
-
-        data["post_id"] = post_id
+        data["post_id"] = self.kwargs.get("post_id")
+        instance = get_object_or_404(WasteReport.objects.all(), pk=data["post_id"])
 
         task_serializer = ActionWasteReportSerializer(
-            data=data, context={"waste_post": instance}
+            data=data, context={"waste_post": instance, **self.get_serializer_context()}
         )
         task_serializer.is_valid(raise_exception=True)
+        task_serializer.save()
         data = task_serializer.data
 
-        if data["action"] == "accept":
-            data = {
-                "cleaner": data["cleaner"],
-                "accepted_at": datetime.now(),
-                "status": WasteReport.StatusChoice.INPROGRESS,
-            }
-        elif data["action"] == "done":
-            data = {
-                "cleaner": data["cleaner"],
-                "completed_at": datetime.now(),
-                "status": WasteReport.StatusChoice.CLEARED,
-            }
-        else:
-            data = {
-                "cleaner": None,
-                "accepted_at": None,
-                "status": WasteReport.StatusChoice.AVAILABLE,
-            }
-        serializer = WasteReportSerializer(instance=instance, data=data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        return data
 
     def post(self, request, *args, **kwargs):
         user = request.user
         request.data["user"] = user
-        self.modify_post_task(request.data)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        data = self.modify_post_task(request.data)
+        return Response(data=data, status=status.HTTP_202_ACCEPTED)
 
 
 waste_report_task_view = WasteReportTaskView.as_view()
+
+
+class WasteReportActivitesView(ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (JWTAuthentication,)
+    queryset = WasteReportActivity.objects.all()
+    serializer_class = WasteActivitySerializer
+
+
+waste_report_activities_view = WasteReportActivitesView.as_view()

@@ -1,3 +1,4 @@
+from datetime import datetime
 from rest_framework import serializers
 from .models import WasteReport, WasteReportActivity
 from django.contrib.gis.geos import Point
@@ -6,7 +7,8 @@ from api.models import Image
 from auth_api.serializers import UserDetailsSerailizer
 from api.serializers import ImageSerializer
 from django.contrib.auth import get_user_model
-
+from asgiref.sync import sync_to_async
+from .signals import waste_report_action
 
 # from django.contrib.gis.db.models.proxy import SpatialProxy
 # django.contrib.gis.db.models.proxy.SpatialProxy
@@ -64,43 +66,57 @@ class NewWasteReportSerializer(serializers.Serializer):
     image = serializers.ImageField()
 
     def create(self, validated_data):
-        image = self.create_image_instance(validated_data.pop("image"))
+        image = Image.save_img_file_to(
+            validated_data.pop("image"), upload_to="waste_reports"
+        )
+        user = validated_data.pop("user_id") or self.context.request.user
+
         waste_report = WasteReport.objects.create(
             title=validated_data.pop("title"),
             description=validated_data.pop("description"),
             location=Point(
                 validated_data.pop("longitude"), validated_data.pop("latitude")
             ),
-            posted_by=validated_data.pop("user_id"),
+            posted_by=user,
             thumbnail=image,
         )
 
-        return waste_report
+        WasteActivitySerializer.create_waste_activity(
+            user=user.pk,
+            post=waste_report.pk,
+            activity=WasteReportActivity.ActivityType.ADDED_POST,
+        )
 
-    def create_image_instance(self, image):
-        img = Image(img_file=image)
-        img.upload_to = "waste_reports"
-        img.save()
-        return img
+        return waste_report
 
 
 class ActionWasteReportSerializer(serializers.Serializer):
     CHOICES = ("accept", "done", "cancel")
     cleaner = serializers.PrimaryKeyRelatedField(
-        queryset=get_user_model().objects.all()
+        queryset=get_user_model().objects.all(), write_only=True
     )
-    post_id = serializers.PrimaryKeyRelatedField(queryset=WasteReport.objects.all())
-    action = serializers.ChoiceField(choices=CHOICES)
+    post_id = serializers.PrimaryKeyRelatedField(
+        queryset=WasteReport.objects.all(), write_only=True
+    )
+    action = serializers.ChoiceField(choices=CHOICES, write_only=True)
+    result = WasteReportSerializer(read_only=True, required=False)
 
     def validate(self, attrs):
         waste_post = self.context.get("waste_post")
-
-        if waste_post.posted_by == attrs["cleaner"]:
+        if attrs["action"] == "accept" and waste_post.cleaner:
             raise serializers.ValidationError(
-                {"cleaner": "You cannot accept waste report task to your own post"}
+                "Someone already accepted this waste report"
+            )
+        return attrs
+
+    def validate_cleaner(self, cleaner):
+        waste_post = self.context.get("waste_post")
+        if waste_post.posted_by == cleaner:
+            raise serializers.ValidationError(
+                "You cannot accept waste report task to your own post"
             )
 
-        return attrs
+        return cleaner
 
     def validate_action(self, action):
         instance = self.context.get("waste_post")
@@ -110,7 +126,74 @@ class ActionWasteReportSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Waste report status is not available, can't accept the task"
             )
+        if (
+            action == "cancel"
+            and instance_status != WasteReport.StatusChoice.INPROGRESS
+        ):
+            raise serializers.ValidationError(
+                f"Waste report status is {instance.status}, can't cancel the task"
+            )
         return action
 
+    def create(self, validated_data):
+        cleaner = validated_data["cleaner"]
+        if validated_data["action"] == "accept":
+            activity = WasteReportActivity.ActivityType.ACCEPT_TASK
+            data = {
+                "cleaner": validated_data["cleaner"].pk,
+                "accepted_at": datetime.now(),
+                "status": WasteReport.StatusChoice.INPROGRESS,
+            }
+        elif validated_data["action"] == "done":
+            activity = WasteReportActivity.ActivityType.FINISHED_TASK
+            data = {
+                "cleaner": validated_data["cleaner"].pk,
+                "completed_at": datetime.now(),
+                "status": WasteReport.StatusChoice.CLEARED,
+            }
+        else:
+            activity = WasteReportActivity.ActivityType.CANCEL_TASK
+            data = {
+                "cleaner": None,
+                "accepted_at": None,
+                "status": WasteReport.StatusChoice.AVAILABLE,
+            }
 
-# class WasteActivitySerializer(serializers.ModelSerializer): ...
+        serializer = WasteReportSerializer(
+            instance=self.context.get("waste_post"), data=data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        waste_report = serializer.save()
+
+        WasteActivitySerializer.create_waste_activity(
+            user=cleaner.pk, post=waste_report.pk, activity=activity
+        )
+
+        return {"result": waste_report}
+
+
+class WasteActivitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WasteReportActivity
+        fields = "__all__"
+
+    def to_representation(self, initial_instance):
+        user_details = UserDetailsSerailizer(
+            instance=initial_instance.user, context=self.context
+        ).data
+        post_details = WasteReportSerializer(
+            instance=initial_instance.post, context=self.context
+        ).data
+        instance = super().to_representation(initial_instance)
+        instance["user"] = user_details
+        instance["post"] = post_details
+        return instance
+
+    @classmethod
+    def create_waste_activity(cls, **kwargs):
+        """
+        Helper function to create a WasteReportActivity
+        """
+        serializer = cls(data=kwargs)
+        serializer.is_valid(raise_exception=True)
+        return serializer.save()

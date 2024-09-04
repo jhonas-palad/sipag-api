@@ -5,6 +5,8 @@ from django.contrib.gis.geos import Point
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Q, F, CheckConstraint
+from .signals import waste_report_action
+
 
 User = get_user_model()
 
@@ -54,6 +56,7 @@ class WasteReportActivity(models.Model):
     class ActivityType(models.TextChoices):
         ACCEPT_TASK = "ACCEPT_POST", _("Accepted post")
         CANCEL_TASK = "CANCEL_TASK", _("Cancelled task")
+        FINISHED_TASK = "FINISH_TASK", _("Finish task")
         UPDATED_POST = "UPDATED_POST", _("Updated a Post")
         ADDED_POST = "ADDED_POST", _("Added a Post")
 
@@ -65,3 +68,6 @@ class WasteReportActivity(models.Model):
     activity_timestamp = models.DateTimeField(
         _("Activity Timestamp"), auto_now_add=True
     )
+
+    class Meta:
+        ordering = ["-activity_timestamp"]
