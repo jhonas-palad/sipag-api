@@ -202,7 +202,9 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=os.getenv("ACCESS_TOKEN_LIFETIME", 48)),
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        hours=int(os.getenv("ACCESS_TOKEN_LIFETIME", 48))
+    ),
     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
     "SLIDING_TOKEN_LIFETIME": timedelta(days=30),
     "SLIDING_TOKEN_REFRESH_LIFETIME_LATE_USER": timedelta(days=1),
