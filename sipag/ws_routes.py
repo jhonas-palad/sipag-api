@@ -19,5 +19,5 @@ class PostConsumer(WebsocketConsumer):
 
 
 ws_urlpatterns = [
-    re_path(r"^ws$", PostConsumer.as_asgi()),
+    re_path(r"^ws/$", PostConsumer.as_asgi()),
 ] + waste_ws_urlpatterns

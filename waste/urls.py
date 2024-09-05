@@ -30,6 +30,6 @@ urlpatterns = [
 
 ws_urlpatterns = [
     re_path(
-        r"^waste-report-activities/$", WasteReportActivityNotificationConsumer.as_asgi()
+        r"^ws/waste-report-activities/$", WasteReportActivityNotificationConsumer.as_asgi()
     )
 ]
