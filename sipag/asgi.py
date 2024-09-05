@@ -11,18 +11,18 @@ import os
 import django
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.security.websocket import AllowedHostsOriginValidator
-from .middlewares import JWTAuthMiddleware
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "sipag.settings")
 
 
-from .ws_routes import ws_urlpatterns
-
-
 def get_ws_handler():
-    django.setup()
-    return (AllowedHostsOriginValidator(JWTAuthMiddleware(URLRouter(ws_urlpatterns))),)
+    django.setup(set_prefix=False)
+    from .middlewares import JWTAuthMiddleware
+    from .ws_routes import ws_urlpatterns
+
+    from channels.security.websocket import AllowedHostsOriginValidator
+
+    return AllowedHostsOriginValidator(JWTAuthMiddleware(URLRouter(ws_urlpatterns)))
 
 
 application = ProtocolTypeRouter(

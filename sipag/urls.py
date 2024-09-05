@@ -11,7 +11,7 @@ def index_view(request):
 
 
 urlpatterns = [
-    path("/", index_view),
+    path("index/", index_view),
     path("admin/", admin.site.urls),
     path("api/v1/", include("api.urls", namespace="v1")),
 ]
