@@ -1,13 +1,19 @@
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import HttpResponse
 from django.views.static import serve
 from django.urls import path, re_path, include
 
+
+def index_view(request):
+    return HttpResponse("Hello, world!")
+
+
 urlpatterns = [
+    path("/", index_view),
     path("admin/", admin.site.urls),
-    re_path(r"^api/v1/", include("api.urls", namespace="v1")),
-    # re_path(r'v2')
+    path("api/v1/", include("api.urls", namespace="v1")),
 ]
 
 if settings.DEBUG:

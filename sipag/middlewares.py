@@ -12,12 +12,14 @@ from rest_framework_simplejwt.exceptions import (
 
 from rest_framework_simplejwt.settings import api_settings
 from channels.db import database_sync_to_async
-from django.contrib.auth import get_user_model
+
 from django.utils.translation import gettext_lazy as _
 
 
 class JWTAuthMiddleware(BaseMiddleware):
     def __init__(self, *args, **kwargs):
+        from django.contrib.auth import get_user_model
+
         super().__init__(*args, **kwargs)
         self.user_model = get_user_model()
 

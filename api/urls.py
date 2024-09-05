@@ -1,6 +1,4 @@
 from django.urls import re_path, include
-
-from django.conf import settings
 from .views import index_view
 app_name = "api"
 urlpatterns = [
