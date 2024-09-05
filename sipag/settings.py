@@ -216,12 +216,19 @@ SIMPLE_JWT = {
 # CHANNELS
 REDIS_HOST = os.getenv("REDIS_HOST") if not DEBUG else "127.0.0.1"
 REDIS_PORT = os.getenv("REDIS_PORT") if not DEBUG else 6379
+if DEBUG:
+    REDIS_CONFIG = {"hosts": [(REDIS_HOST, REDIS_PORT)]}
+else:
+    REDIS_USERNAME = os.getenv("REDIS_USERNAME", "default")
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+    REDIS_ADDRESS = (
+        f"redis://{REDIS_USERNAME}:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}"
+    )
+    REDIS_CONFIG = {"hosts": [{"address": REDIS_ADDRESS}]}
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [(REDIS_HOST, REDIS_PORT)],
-        },
+        "CONFIG": REDIS_CONFIG,
     }
 }
