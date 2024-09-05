@@ -1,7 +1,0 @@
-#!/bin/bash
-
-# Check if requirements.txt exists
-if [ ! -f "requirements.txt" ]; then
-    echo "Error: requirements.txt does not exist. Generating it using Poetry..."
-    exit 1
-fi
