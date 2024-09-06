@@ -9,6 +9,7 @@ from api.serializers import ImageSerializer
 from django.contrib.auth import get_user_model
 from asgiref.sync import sync_to_async
 from .signals import waste_report_action
+from rest_framework.exceptions import PermissionDenied
 
 # from django.contrib.gis.db.models.proxy import SpatialProxy
 # django.contrib.gis.db.models.proxy.SpatialProxy
@@ -90,6 +91,29 @@ class NewWasteReportSerializer(serializers.Serializer):
         return waste_report
 
 
+class DeleteWasteReportSerializer(serializers.Serializer):
+    waste_report = serializers.PrimaryKeyRelatedField(
+        queryset=WasteReport.objects.all(), write_only=True
+    )
+
+    def validate_waste_report(self, waste_report):
+        user = self.context.get("request").user
+
+        if not user.is_staff and waste_report.posted_by != user:
+            raise PermissionDenied(
+                "You don't have permission to delete this waste report."
+            )
+        if waste_report.status != WasteReport.StatusChoice.AVAILABLE:
+            raise serializers.ValidationError(
+                f"Waste report's status is {waste_report.status}, can't delete this post."
+            )
+        return waste_report
+
+    def delete(self):
+        waste_report = self.validated_data["waste_report"]
+        waste_report.delete()
+
+
 class ActionWasteReportSerializer(serializers.Serializer):
     CHOICES = ("accept", "done", "cancel")
     cleaner = serializers.PrimaryKeyRelatedField(
@@ -98,7 +122,7 @@ class ActionWasteReportSerializer(serializers.Serializer):
     post_id = serializers.PrimaryKeyRelatedField(
         queryset=WasteReport.objects.all(), write_only=True
     )
-    action = serializers.ChoiceField(choices=CHOICES, write_only=True)
+    action = serializers.ChoiceField(choices=CHOICES)
     result = WasteReportSerializer(read_only=True, required=False)
 
     def validate(self, attrs):
@@ -131,7 +155,7 @@ class ActionWasteReportSerializer(serializers.Serializer):
             and instance_status != WasteReport.StatusChoice.INPROGRESS
         ):
             raise serializers.ValidationError(
-                f"Waste report status is {instance.status}, can't cancel the task"
+                f"Waste report status was {instance.status}, can't cancel the task"
             )
         return action
 
@@ -169,7 +193,7 @@ class ActionWasteReportSerializer(serializers.Serializer):
             user=cleaner.pk, post=waste_report.pk, activity=activity
         )
 
-        return {"result": waste_report}
+        return {"result": waste_report, "action": validated_data["action"]}
 
 
 class WasteActivitySerializer(serializers.ModelSerializer):

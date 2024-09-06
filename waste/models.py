@@ -60,8 +60,8 @@ class WasteReportActivity(models.Model):
         UPDATED_POST = "UPDATED_POST", _("Updated a Post")
         ADDED_POST = "ADDED_POST", _("Added a Post")
 
-    user = models.ForeignKey(to=User, on_delete=models.DO_NOTHING, blank=True)
-    post = models.ForeignKey(to=WasteReport, on_delete=models.DO_NOTHING)
+    user = models.ForeignKey(to=User, on_delete=models.CASCADE, blank=True)
+    post = models.ForeignKey(to=WasteReport, on_delete=models.SET_NULL, null=True)
     activity = models.CharField(
         _("Waste Report Activity"), max_length=20, choices=ActivityType
     )

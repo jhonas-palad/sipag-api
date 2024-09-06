@@ -12,6 +12,7 @@ from .serializers import (
     WasteActivitySerializer,
     WasteReportSerializer,
     ActionWasteReportSerializer,
+    DeleteWasteReportSerializer,
 )
 
 from datetime import datetime
@@ -75,17 +76,16 @@ class WasteReportView(GenericAPIView):
         return self.get_response(waste_report)
 
     def delete_waste_report(self, id):
-        waste_report = self.get_waste_report(id)
-        if not self.user.is_staff and waste_report.posted_by != self.user:
-            raise PermissionDenied(
-                "You don't have permission to delete this waste report."
-            )
+        # waste_report = self.get_waste_report(id)
+        waste_report = DeleteWasteReportSerializer(
+            data={"waste_report": id}, context=self.get_serializer_context()
+        )
+        waste_report.is_valid(raise_exception=True)
         waste_report.delete()
-        return waste_report
 
     def delete(self, request, *args, **kwargs):
         self.user = request.user
-        r = self.delete_waste_report(kwargs.pop("pk"))
+        self.delete_waste_report(kwargs.pop("pk"))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def patch(self, request, *args, **kwargs): ...
