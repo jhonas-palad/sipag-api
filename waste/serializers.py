@@ -205,9 +205,13 @@ class WasteActivitySerializer(serializers.ModelSerializer):
         user_details = UserDetailsSerailizer(
             instance=initial_instance.user, context=self.context
         ).data
-        post_details = WasteReportSerializer(
-            instance=initial_instance.post, context=self.context
-        ).data
+        if initial_instance.post:
+            post_details = WasteReportSerializer(
+                instance=initial_instance.post, context=self.context
+            ).data
+        else:
+            post_details = None
+
         instance = super().to_representation(initial_instance)
         instance["user"] = user_details
         instance["post"] = post_details
