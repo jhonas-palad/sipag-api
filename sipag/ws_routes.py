@@ -1,6 +1,7 @@
 from django.urls import re_path
 from channels.generic.websocket import WebsocketConsumer
 from waste.urls import ws_urlpatterns as waste_ws_urlpatterns
+from announcements.urls import ws_urlpatterns as announcements_ws_urlpatterns
 import json
 
 
@@ -18,6 +19,10 @@ class PostConsumer(WebsocketConsumer):
         self.send(text_data=json.dumps({"message": message}))
 
 
-ws_urlpatterns = [
-    re_path(r"^ws/$", PostConsumer.as_asgi()),
-] + waste_ws_urlpatterns
+ws_urlpatterns = (
+    [
+        re_path(r"^ws/$", PostConsumer.as_asgi()),
+    ]
+    + waste_ws_urlpatterns
+    + announcements_ws_urlpatterns
+)

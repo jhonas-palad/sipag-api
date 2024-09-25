@@ -1,11 +1,14 @@
 from django.db import models
 from api.models import Image
+from auth_api.validators import admin_user_validator
+from django.core.exceptions import ValidationError
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Q, F, CheckConstraint
-from .signals import waste_report_action
+from django.conf import settings
+from django.core.validators import MaxValueValidator
 
 
 User = get_user_model()
@@ -71,3 +74,36 @@ class WasteReportActivity(models.Model):
 
     class Meta:
         ordering = ["-activity_timestamp"]
+
+
+points_validator = MaxValueValidator(settings.SIPAG_CONFIG["MAX_POINTS"])
+
+
+# I should have created a new variant of user.
+class CleanerPoints(models.Model):
+    user = models.OneToOneField(
+        to=User, on_delete=models.CASCADE, blank=True, primary_key=True
+    )
+    count = models.IntegerField(
+        _("points count"), default=0, validators=[points_validator]
+    )
+    redeemed = models.BooleanField(_("points redemed"), default=False)
+
+
+class RedeemRecord(models.Model):
+    cleaner_points = models.ForeignKey(
+        to=CleanerPoints, on_delete=models.CASCADE, blank=True
+    )
+    claimed_date = models.DateTimeField(_("claimed date"), auto_now_add=True)
+    assisted_by = models.ForeignKey(
+        to=User,
+        related_name="points_assisted_by",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    def clean(self) -> None:
+        if not self.assisted_by.is_staff:
+            raise ValidationError({"assisted_by": "Only staff can redeem points"})
+        return super().clean()

@@ -35,7 +35,10 @@ class LoginSerializer(serializers.Serializer):
         if email and password:
             user = self.authenticate(email=email, password=password)
         elif phone_number and password:
-            user = self.authenticate(phone_number=phone_number, password=password)
+            try:
+                user = self.authenticate(phone_number=phone_number, password=password)
+            except ValueError:
+                raise exceptions.ValidationError("Phone number is invalid")
         else:
             msg = _("Must include either Phone number or Email.")
             raise exceptions.ValidationError(msg)
@@ -57,6 +60,17 @@ class LoginSerializer(serializers.Serializer):
 
         attrs["user"] = user
         return attrs
+
+
+class UserSerializer(serializers.ModelSerializer):
+    photo = photo = ImageSerializer()
+    phone_number = PhoneNumberField(
+        region="PH", required=False, allow_blank=True, default=""
+    )
+
+    class Meta:
+        model = UserModel
+        exclude = ["password"]
 
 
 class UserDetailsSerailizer(serializers.Serializer):
@@ -94,23 +108,13 @@ class JWTSerializer(serializers.Serializer):
     user = serializers.SerializerMethodField()
     token = serializers.CharField()
 
-    def validate(self, attrs: Dict[str, Any]) -> Dict[str, str]:
-        data = super().validate(attrs)
-        user = attrs["user"]
-        refresh = self.get_token(user)
-
-        data["access"] = str(refresh)
-
-        update_last_login(None, user)
-
-        return data
-
     @classmethod
     def get_token(cls, user: AuthUser) -> Token:
+        update_last_login(None, user)
         return cls.token_class.for_user(user)
 
     def get_user(self, obj):
-        user_data = UserDetailsSerailizer(obj["user"], context=self.context).data
+        user_data = UserSerializer(obj["user"], context=self.context).data
         return user_data
 
 

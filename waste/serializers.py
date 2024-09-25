@@ -1,15 +1,17 @@
 from datetime import datetime
-from rest_framework import serializers
-from .models import WasteReport, WasteReportActivity
 from django.contrib.gis.geos import Point
-
-from api.models import Image
-from auth_api.serializers import UserDetailsSerailizer
-from api.serializers import ImageSerializer
 from django.contrib.auth import get_user_model
-from asgiref.sync import sync_to_async
-from .signals import waste_report_action
+from django.db.models.query import Q
+from django.conf import settings
+
+from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.generics import get_object_or_404
+from auth_api.serializers import UserDetailsSerailizer, UserSerializer
+from api.serializers import ImageSerializer
+from api.models import Image
+from .signals import finished_task_post
+from .models import WasteReport, WasteReportActivity, CleanerPoints, RedeemRecord
 
 # from django.contrib.gis.db.models.proxy import SpatialProxy
 # django.contrib.gis.db.models.proxy.SpatialProxy
@@ -157,6 +159,11 @@ class ActionWasteReportSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 f"Waste report status was {instance.status}, can't cancel the task"
             )
+        if action == "done" and instance_status != WasteReport.StatusChoice.INPROGRESS:
+            raise serializers.ValidationError(
+                f"Waste report status was {instance.status}, can't finish the task"
+            )
+
         return action
 
     def create(self, validated_data):
@@ -175,6 +182,9 @@ class ActionWasteReportSerializer(serializers.Serializer):
                 "completed_at": datetime.now(),
                 "status": WasteReport.StatusChoice.CLEARED,
             }
+            # finished_task_post.send(self.__class__, cleaner=cleaner)
+            CleanerPointsSerializer.add_points(cleaner=cleaner)
+
         else:
             activity = WasteReportActivity.ActivityType.CANCEL_TASK
             data = {
@@ -225,3 +235,106 @@ class WasteActivitySerializer(serializers.ModelSerializer):
         serializer = cls(data=kwargs)
         serializer.is_valid(raise_exception=True)
         return serializer.save()
+
+
+class CleanerPointsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CleanerPoints
+        fields = "__all__"
+
+    def validate(self, attrs):
+        if self.instance:
+            if self.instance.count > settings.SIPAG_CONFIG["MAX_POINTS"]:
+                raise serializers.ValidationError(
+                    {
+                        "count": "User has reached the maximum points, redeem it first to reset."
+                    }
+                )
+
+        return super().validate(attrs)
+
+    def to_representation(self, instance):
+
+        user = UserSerializer(instance=instance.user, context=self.context).data
+        return {
+            "user": user,
+            "count": instance.count,
+            "redeemed": instance.redeemed,
+        }
+
+    @classmethod
+    def add_points(cls, cleaner):
+        cleaner_points = get_object_or_404(cls.Meta.model.objects.all(), user=cleaner)
+
+        serializer = cls(
+            instance=cleaner_points,
+            data={"count": cleaner_points.count + 1},
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return serializer.data
+
+    @classmethod
+    def reset_points(cls, cleaner):
+        cleaner_points = get_object_or_404(cls.Meta.model.objects.all(), user=cleaner)
+
+        serializer = cls(
+            instance=cleaner_points,
+            data={"count": 0},
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return serializer.data
+
+    @classmethod
+    def generate_points(cls, cleaner):
+        cleaner_points, new = cls.Meta.model.objects.get_or_create(user=cleaner)
+        count = cleaner.wastereportactivity_set.filter(
+            activity=WasteReportActivity.ActivityType.FINISHED_TASK
+        ).count()
+
+        serializer = cls(instance=cleaner_points, data={"count": count}, partial=True)
+        serializer.is_valid(raise_exception=True)
+        if new or cleaner_points.count != count:
+            return serializer.save()
+
+        return cleaner_points
+
+
+class RedeemRecordSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        cleaner_points = CleanerPointsSerializer(
+            instance=instance.cleaner_points, context=self.context
+        ).data
+        assisted_by = UserSerializer(
+            instance=instance.assisted_by, context=self.context
+        ).data
+
+        return {
+            "cleaner_points": cleaner_points,
+            "assisted_by": assisted_by,
+            "claimed_date": instance.claimed_date,
+        }
+
+    def validate(self, attrs):
+        if attrs["cleaner_points"].count < settings.SIPAG_CONFIG["MAX_POINTS"]:
+            raise serializers.ValidationError(
+                {
+                    "cleaner_points": f"The user must reach {settings.SIPAG_CONFIG['MAX_POINTS']} points before claiming it"
+                }
+            )
+
+        if attrs["assisted_by"].is_staff is False:
+            raise serializers.ValidationError(
+                {"assisted_by": "Only staff can redeem points"}
+            )
+        if self.instance:
+            self.instance.full_clean()
+
+        return super().validate(attrs)
+
+    class Meta:
+        model = RedeemRecord
+        fields = "__all__"

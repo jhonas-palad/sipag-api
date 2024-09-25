@@ -23,6 +23,7 @@ python-dotenv = "^1.0.1"
 django-storages = {extras = ["s3"], version = "^1.14.4"}
 channels-redis = "^4.2.0"
 coverage = "^7.6.1"
+django-filter = "^24.3"
 
 
 [build-system]

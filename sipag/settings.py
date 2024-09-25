@@ -40,6 +40,7 @@ DEBUG = os.getenv("DEBUG") == "TRUE"
 INSTALLED_APPS = [
     "daphne",
     "django.contrib.admin",
+    "auth_api",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -49,11 +50,12 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_gis",
     "rest_framework_simplejwt",
+    "django_filters",
     "phonenumber_field",
     "corsheaders",
-    "auth_api",
     "waste",
     "api",
+    "announcements",
 ]
 
 MIDDLEWARE = [
@@ -196,6 +198,7 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
 }
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
@@ -231,4 +234,12 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": REDIS_CONFIG,
     }
+}
+
+
+SIPAG_CONFIG = {
+    "MAX_POINTS": 10,
+    "CONSUMER_GROUPS": {
+        "announcements": "announcements"
+    },
 }

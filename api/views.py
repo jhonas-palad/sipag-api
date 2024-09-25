@@ -9,8 +9,6 @@ class IndexView(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request):
-        print("sleeping...")
-        time.sleep(5)
         return Response(
             data={
                 "status": "success",

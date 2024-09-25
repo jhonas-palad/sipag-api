@@ -1,5 +1,10 @@
-from rest_framework.generics import GenericAPIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.generics import (
+    GenericAPIView,
+    ListAPIView,
+    RetrieveUpdateDestroyAPIView,
+    UpdateAPIView,
+)
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
@@ -14,9 +19,11 @@ from .serializers import (
     JWTSerializer,
     SignupSerializer,
     UserDetailsSerailizer,
+    UserSerializer,
     UserPhotoSerializer,
     UserCredentialsSerializer,
 )
+from .models import User
 from utils.models import to_model_dict
 
 sensitive_post_parameters_m = method_decorator(
@@ -81,7 +88,7 @@ class SignupView(GenericAPIView):
 
     def save_user(self, *args, **kwargs):
         self.user = self.serializer.save(*args, **kwargs)
-        user_detail = UserDetailsSerailizer(
+        user_detail = UserSerializer(
             instance=self.user, context={"request": self.request}
         )
         return user_detail.data
@@ -91,8 +98,6 @@ class SignupView(GenericAPIView):
         return Response(data=user_detail, status=status.HTTP_201_CREATED)
 
     def post(self, request, *args, **kwargs):
-        # print(request.FILES)
-        print(request.data)
         self.serializer = self.get_serializer(
             data=request.data, context={"request": self.request}
         )
@@ -177,3 +182,30 @@ class SignoutView(GenericAPIView):
 
 
 signout_view = SignoutView.as_view()
+
+
+class UserListView(ListAPIView):
+    queryset = User.objects.all()
+    permission_classes = (IsAuthenticated, IsAdminUser)
+    authentication_classes = (JWTAuthentication,)
+    serializer_class = UserSerializer
+    filterset_fields = [
+        "is_verified",
+        "is_staff",
+    ]
+
+    def get_queryset(self):
+        return super().get_queryset().order_by("id")
+
+
+user_list_view = UserListView.as_view()
+
+
+class UserDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (JWTAuthentication,)
+    serializer_class = UserSerializer
+
+
+user_detail_view = UserDetailView.as_view()

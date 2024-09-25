@@ -1,21 +1,37 @@
-from rest_framework.generics import GenericAPIView, ListAPIView, get_object_or_404
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.http.response import Http404
+from rest_framework.generics import (
+    GenericAPIView,
+    ListAPIView,
+    CreateAPIView,
+    RetrieveAPIView,
+    get_object_or_404,
+)
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import NotFound, PermissionDenied, MethodNotAllowed
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.exceptions import (
+    NotFound,
+    MethodNotAllowed,
+)
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import WasteReport, WasteReportActivity
-from channels.db import database_sync_to_async
+from .models import WasteReport, WasteReportActivity, CleanerPoints, RedeemRecord
 from .serializers import (
     NewWasteReportSerializer,
     WasteActivitySerializer,
     WasteReportSerializer,
     ActionWasteReportSerializer,
     DeleteWasteReportSerializer,
+    CleanerPointsSerializer,
+    RedeemRecordSerializer,
 )
 
+from .helpers import generate_cleaner_points
 from datetime import datetime
+
+UserModel = get_user_model()
 
 
 # Create your views here.
@@ -131,3 +147,41 @@ class WasteReportActivitesView(ListAPIView):
 
 
 waste_report_activities_view = WasteReportActivitesView.as_view()
+
+
+class CleanerRetrieveView(RetrieveAPIView):
+    permission_classes = (IsAuthenticated, IsAdminUser)
+    authentication_classes = (JWTAuthentication,)
+    queryset = CleanerPoints.objects.all()
+    serializer_class = CleanerPointsSerializer
+    # lookup_field = "id"
+
+    def get_object(self):
+        try:
+            result = super().get_object()
+            return result
+            # return super().get_object()
+        except Http404 as exc:
+            lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+            filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+            return generate_cleaner_points(**filter_kwargs)
+
+
+cleaner_retrieve_view = CleanerRetrieveView.as_view()
+
+
+class RedeemRecordView(CreateAPIView, ListAPIView):
+    permission_classes = (IsAuthenticated, IsAdminUser)
+    authentication_classes = (JWTAuthentication,)
+    queryset = RedeemRecord.objects.all()
+    serializer_class = RedeemRecordSerializer
+    filterset_fields = [
+        "cleaner_points",
+    ]
+
+    def post(self, request, *args, **kwargs):
+        request.data["assisted_by"] = request.user.id
+        return super().post(request, *args, **kwargs)
+
+
+redeem_record_view = RedeemRecordView.as_view()
