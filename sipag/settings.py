@@ -33,8 +33,7 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 
 DEBUG = os.getenv("DEBUG") == "TRUE"
-
-
+print(os.getenv("DEBUG"))
 # Application definition
 
 INSTALLED_APPS = [
@@ -239,7 +238,5 @@ CHANNEL_LAYERS = {
 
 SIPAG_CONFIG = {
     "MAX_POINTS": 10,
-    "CONSUMER_GROUPS": {
-        "announcements": "announcements"
-    },
+    "CONSUMER_GROUPS": {"announcements": "announcements"},
 }

@@ -181,18 +181,15 @@ class UserPhotoSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         user = UserModel.objects.get(id=validated_data.get("id"))
-        print("imagefile", validated_data["photo"]["img_file"])
         user_photo = Image(**validated_data["photo"])
         user_photo.upload_to = "users"
         user_photo.save()
         user.photo = user_photo
         user.save()
-        print("sda", user_photo)
         return {
             "id": user.id,
             "photo": ImageSerializer(instance=user_photo, context=self.context).data,
         }
 
     def validate(self, attrs):
-        print("attrs", attrs)
         return attrs
