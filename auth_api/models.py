@@ -68,7 +68,6 @@ class User(AbstractUser):
     photo = models.OneToOneField(
         to=Image, on_delete=models.DO_NOTHING, blank=True, null=True
     )
-    email = models.EmailField(_("email address"), blank=True, null=True, unique=True)
     is_verified = models.BooleanField(_("is verified"), default=False)
     # Need for auth checks, and authenticate method
     USERNAME_FIELD = "phone_number"
