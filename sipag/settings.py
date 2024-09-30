@@ -219,6 +219,7 @@ SIMPLE_JWT = {
 REDIS_HOST = os.getenv("REDIS_HOST") if not DEBUG else "127.0.0.1"
 REDIS_PORT = os.getenv("REDIS_PORT") if not DEBUG else 6379
 if DEBUG:
+    REDIS_ADDRESS = f"redis://{REDIS_HOST}:{6379}"
     REDIS_CONFIG = {"hosts": [(REDIS_HOST, REDIS_PORT)]}
 else:
     REDIS_USERNAME = os.getenv("REDIS_USERNAME", "default")
@@ -244,4 +245,4 @@ SIPAG_CONFIG = {
 EXPO_TOKEN = os.getenv("EXPO_TOKEN")
 
 # This configures Redis as the datastore between Django + Celery
-CELERY_BROKER_URL = "redis://localhost:6379"
+CELERY_BROKER_URL = REDIS_ADDRESS
