@@ -41,3 +41,5 @@ private_announcement_signal_handler = handler(
 receiver(post_save, sender="announcements.PrivateAnnouncement")(
     private_announcement_signal_handler
 )
+
+# IMPORT THIS MODULE IN APP

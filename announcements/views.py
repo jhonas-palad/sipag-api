@@ -1,17 +1,19 @@
 from django.shortcuts import render
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, CreateAPIView
 from rest_framework.generics import ListCreateAPIView, ListAPIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
-
-from .models import PrivateAnnouncement, PublicAnnouncement
+from django.db.models import Q
+from .models import PrivateAnnouncement, PublicAnnouncement, PushToken
 from .serializers import (
     PublicAnnouncementSerializer,
     PrivateAnnouncementSerializer,
     AnnouncementSerializer,
+    PushTokenSerializer,
 )
+from .tasks import send_push_messages
 from itertools import chain
 from operator import attrgetter
 
@@ -27,6 +29,11 @@ class PublicAnnouncementView(ListCreateAPIView):
         if not "by" in request.data:
             request.data["by"] = request.user.id
         return super().post(request=request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        description = serializer.data["description"]
+        send_push_messages.delay_on_commit(description)
 
 
 public_announcement_view = PublicAnnouncementView.as_view()
@@ -66,7 +73,7 @@ class AnnouncementView(GenericAPIView):
         if to:
             qs2 = (
                 PrivateAnnouncement.objects.all()
-                .filter(to=to)
+                .filter(Q(to=to) | Q(to=None))
                 .order_by("-date_created")
             )
         else:
@@ -79,3 +86,23 @@ class AnnouncementView(GenericAPIView):
 
 
 announcement_view = AnnouncementView.as_view()
+
+
+class PushTokenView(GenericAPIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = PushTokenSerializer
+
+    def post(self, request, *args, **kwargs):
+        push_token, old = PushToken.objects.get_or_create(
+            token=request.data["token"], defaults={"user": request.user}
+        )
+        print(old)
+        if not push_token.active:
+            push_token.active = True
+            push_token.save()
+
+        return Response(data={}, status=status.HTTP_201_CREATED)
+
+
+push_token_view = PushTokenView.as_view()

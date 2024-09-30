@@ -57,7 +57,6 @@ class LoginSerializer(serializers.Serializer):
         user = self._validate_username_email(phone_number, email, password)
         if not user:
             raise exceptions.AuthenticationFailed()
-
         attrs["user"] = user
         return attrs
 

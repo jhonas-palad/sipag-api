@@ -27,4 +27,14 @@ class PublicAnnouncement(NotficationBase):
 
 
 class PrivateAnnouncement(NotficationBase):
-    to = models.ForeignKey(to=UserModel, on_delete=models.PROTECT)
+    to = models.ForeignKey(to=UserModel, on_delete=models.CASCADE, null=True)
+
+
+class SystemNotification(NotficationBase): ...
+
+
+class PushToken(models.Model):
+    user = models.ForeignKey(to=UserModel, on_delete=models.CASCADE)
+    token = models.CharField(_("token"), max_length=255, blank=False, null=False)
+    active = models.BooleanField(_("active"), default=True)
+    registered_date = models.DateTimeField(_("registered data"), auto_now_add=True)

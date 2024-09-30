@@ -240,3 +240,8 @@ SIPAG_CONFIG = {
     "MAX_POINTS": 10,
     "CONSUMER_GROUPS": {"announcements": "announcements"},
 }
+
+EXPO_TOKEN = os.getenv("EXPO_TOKEN")
+
+# This configures Redis as the datastore between Django + Celery
+CELERY_BROKER_URL = "redis://localhost:6379"
