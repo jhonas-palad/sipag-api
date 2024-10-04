@@ -42,6 +42,7 @@ class WasteReportView(GenericAPIView):
     permission_classes = (IsAuthenticated,)
     authentication_classes = (JWTAuthentication,)
     post_action = None
+    filterset_fields = ["status", "posted_by", "cleaner"]
 
     def get_response(self, data, **kwargs):
         return Response(data=data, status=status.HTTP_201_CREATED, **kwargs)
@@ -56,7 +57,7 @@ class WasteReportView(GenericAPIView):
         if self.lookup_field in self.kwargs:
             return self.get_object(), False
 
-        return self.get_queryset(), True
+        return self.filter_queryset(self.get_queryset()), True
 
     def get(self, request, *args, **kwargs):
 
@@ -150,7 +151,7 @@ waste_report_activities_view = WasteReportActivitesView.as_view()
 
 
 class CleanerRetrieveView(RetrieveAPIView):
-    permission_classes = (IsAuthenticated, IsAdminUser)
+    permission_classes = (IsAuthenticated,)
     authentication_classes = (JWTAuthentication,)
     queryset = CleanerPoints.objects.all()
     serializer_class = CleanerPointsSerializer
@@ -171,7 +172,7 @@ cleaner_retrieve_view = CleanerRetrieveView.as_view()
 
 
 class RedeemRecordView(CreateAPIView, ListAPIView):
-    permission_classes = (IsAuthenticated, IsAdminUser)
+    permission_classes = (IsAuthenticated,)
     authentication_classes = (JWTAuthentication,)
     queryset = RedeemRecord.objects.all()
     serializer_class = RedeemRecordSerializer

@@ -1,6 +1,11 @@
 from django.shortcuts import render
-from rest_framework.generics import GenericAPIView, CreateAPIView
-from rest_framework.generics import ListCreateAPIView, ListAPIView
+from rest_framework.generics import (
+    GenericAPIView,
+    CreateAPIView,
+    ListCreateAPIView,
+    ListAPIView,
+    RetrieveDestroyAPIView,
+)
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
@@ -37,6 +42,16 @@ class PublicAnnouncementView(ListCreateAPIView):
 
 
 public_announcement_view = PublicAnnouncementView.as_view()
+
+
+class PublicAnnouncementDetailView(RetrieveDestroyAPIView):
+    queryset = PublicAnnouncement.objects.all()
+    serializer_class = PublicAnnouncementSerializer
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+
+public_announcement_detail_view = PublicAnnouncementDetailView.as_view()
 
 
 class PrivateAnnouncementView(ListCreateAPIView):
