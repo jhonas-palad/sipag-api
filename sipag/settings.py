@@ -247,3 +247,4 @@ EXPO_TOKEN = os.getenv("EXPO_TOKEN")
 # This configures Redis as the datastore between Django + Celery
 CELERY_BROKER_URL = REDIS_ADDRESS
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+OPENAI_TOKEN = os.getenv("OPENAI_TOKEN")
