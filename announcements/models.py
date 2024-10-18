@@ -34,7 +34,7 @@ class PrivateAnnouncement(NotficationBase):
         POINTS = ("POINTS", _("Points"))
         ANNOUNCEMENTS = ("ANNOUNCEMENTS", _("Announcements"))
 
-    code = models.CharField(_("code"), choices=Codes)
+    code = models.CharField(_("code"), choices=Codes, null=True)
     code_entity_id = models.IntegerField(_("code entity id"), blank=True, null=True)
 
 
