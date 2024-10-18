@@ -9,22 +9,18 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
 
-from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
-from django.http.request import QueryDict
 from .serializers import (
     LoginSerializer,
     JWTSerializer,
     SignupSerializer,
-    UserDetailsSerailizer,
     UserSerializer,
     UserPhotoSerializer,
     UserCredentialsSerializer,
 )
 from .models import User
-from utils.models import to_model_dict
 
 sensitive_post_parameters_m = method_decorator(
     sensitive_post_parameters(

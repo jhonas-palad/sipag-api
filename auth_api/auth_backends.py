@@ -9,16 +9,21 @@ UserModel = get_user_model()
 
 
 class ModelBackend(BaseBackend):
-
     def authenticate(
         self, request, phone_number=None, email=None, password=None, **kwargs
     ):
-
         if (phone_number is None and email is None) or password is None:
             return
-        phone_number = PhoneNumber("63", phone_number)
+        user = None
         try:
-            user = UserModel.objects.get(Q(phone_number=phone_number) | Q(email=email))
+            if phone_number:
+                user = UserModel.objects.get(
+                    phone_number=PhoneNumber("63", phone_number)
+                )
+            elif email:
+                user = UserModel.objects.get(email=email)
+            else:
+                return user
         except UserModel.DoesNotExist:
             # Run the default password hasher once to reduce the timing
             # difference between an existing and a nonexistent user (#20760).

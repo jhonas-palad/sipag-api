@@ -29,6 +29,14 @@ class PublicAnnouncement(NotficationBase):
 class PrivateAnnouncement(NotficationBase):
     to = models.ForeignKey(to=UserModel, on_delete=models.CASCADE, null=True)
 
+    class Codes(models.TextChoices):
+        WASTE = ("WASTE", _("Waste"))
+        POINTS = ("POINTS", _("Points"))
+        ANNOUNCEMENTS = ("ANNOUNCEMENTS", _("Announcements"))
+
+    code = models.CharField(_("code"), choices=Codes)
+    code_entity_id = models.IntegerField(_("code entity id"), blank=True, null=True)
+
 
 class SystemNotification(NotficationBase): ...
 

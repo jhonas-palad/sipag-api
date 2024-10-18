@@ -27,5 +27,3 @@ def send_push_messages(message, extra=None):
     if all_push_token.exists():
         send_expo_notifcation(all_push_token, message, extra=extra)
 
-
-# send_push_message("ExponentPushToken[J3MmyWB--IFUU5ZIMYY3uV]", "HELLOOOO")
